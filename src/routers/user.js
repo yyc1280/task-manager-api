@@ -5,14 +5,19 @@ const auth = require("../middleware/auth");
 const multer = require("multer");
 const sharp = require("sharp");
 const { sendWelcomeEmail, sendByeeEmail } = require("../emails/account");
+const path = require("path");
 
 router.post("/users", async (req, res) => {
+  // console.log(req.body);
   const user = new User(req.body);
+  console.log(req.body);
   try {
     await user.save();
     sendWelcomeEmail(user.email, user.name);
     const token = await user.generateAuthToken();
-    res.status(201).send({ user, token });
+    res.cookie("auth_token", token);
+    res.sendFile(path.resolve(__dirname, "..", "views", "private.html"));
+    // res.status(201).send({ user, token });
   } catch (e) {
     res.status(400).send(e);
   }
@@ -25,6 +30,8 @@ router.post("/users/login", async (req, res) => {
       req.body.password
     );
     const token = await user.generateAuthToken();
+    // res.cookie("auth_token", token);
+    // res.sendFile(path.resolve(__dirname, "..", "views", "private.html"));
     res.send({ user, token });
   } catch (error) {
     res.status(400).send();
@@ -103,7 +110,7 @@ const upload = multer({
 });
 
 router.post(
-  "/user/me/avatar",
+  "/users/me/avatar",
   auth,
   upload.single("avatar"),
   async (req, res) => {
@@ -121,7 +128,7 @@ router.post(
   }
 );
 
-router.delete("/user/me/avatar", auth, async (req, res) => {
+router.delete("/users/me/avatar", auth, async (req, res) => {
   req.user.avatar = undefined;
   await req.user.save();
   res.send();
